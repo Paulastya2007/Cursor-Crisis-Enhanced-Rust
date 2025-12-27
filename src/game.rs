@@ -121,6 +121,7 @@ impl GameState {
 
         // Update popups & Health drain
         for popup in self.popups.iter_mut() {
+            popup.update(dt);
             popup.follow(mx, my, dt);
             if popup.hit(mx, my) {
                 self.health -= DAMAGE_RATE * dt;
