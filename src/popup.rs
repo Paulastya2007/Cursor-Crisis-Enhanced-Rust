@@ -12,7 +12,7 @@ pub struct Popup {
 
 impl Popup {
     pub fn new(max_w: f32, max_h: f32, num_chars: usize) -> Self {
-        let size = gen_range(60.0, 100.0);
+        let size = gen_range(40.0, 60.0);
         Self {
             x: gen_range(0.0, max_w - size),
             y: gen_range(0.0, max_h - size),

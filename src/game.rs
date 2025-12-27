@@ -3,7 +3,7 @@ use crate::popup::Popup;
 use crate::ui::UI;
 use macroquad::audio::{PlaySoundParams, play_sound};
 use macroquad::prelude::*;
-
+use macroquad_particles::{ColorCurve, Emitter, EmitterConfig};
 pub const VIRTUAL_W: f32 = 800.0;
 pub const VIRTUAL_H: f32 = 600.0;
 pub const SPAWN_INTERVAL: f32 = 1.2;
@@ -18,10 +18,27 @@ pub struct ExplosionCircle {
     pub radius: f32,
     pub timer: f32,
 }
+// ---------------- PARTICLE CONFIG ----------------
+
+fn particle_explosion() -> EmitterConfig {
+    EmitterConfig {
+        amount: 25,
+        lifetime: 0.4,
+        emitting: true,
+        initial_direction_spread: 360.0,
+        initial_velocity: 180.0,
+        initial_velocity_randomness: 0.7,
+        size: 6.0,
+        size_randomness: 0.6,
+        gravity: vec2(0.0, 120.0),
+        ..Default::default()
+    }
+}
 
 pub struct GameState {
     pub popups: Vec<Popup>,
     pub explosions: Vec<ExplosionCircle>,
+    pub emitters: Vec<(Emitter, Vec2)>,
     pub spawn_timer: f32,
     pub score: u32,
     pub health: f32,
@@ -36,6 +53,7 @@ impl GameState {
         Self {
             popups: Vec::new(),
             explosions: Vec::new(),
+            emitters: Vec::new(),
             spawn_timer: 0.0,
             score: 0,
             health: 1.0,
@@ -53,6 +71,7 @@ impl GameState {
         self.game_over_sound_played = false;
         self.popups.clear();
         self.explosions.clear();
+        self.emitters.clear();
     }
 
     pub fn update(&mut self, dt: f32, assets: &GameAssets) {
@@ -114,11 +133,14 @@ impl GameState {
         if exploded && self.energy < ENERGY_COST {
             exploded = false;
         }
+        let mut explosion_requests: Vec<Vec2> = Vec::new();
 
         self.explosions.retain_mut(|e| {
             e.timer += dt;
             e.timer < 0.2
         });
+
+        // Emitters will be updated and filtered in draw phase
 
         if exploded {
             self.energy -= ENERGY_COST;
@@ -132,6 +154,8 @@ impl GameState {
 
                 if dist_sq <= EXPLOSION_RADIUS * EXPLOSION_RADIUS {
                     *current_score += 1;
+                    explosion_requests.push(vec2(p.x + p.w / 2.0, p.y + p.h / 2.0));
+
                     false
                 } else {
                     true
@@ -145,12 +169,26 @@ impl GameState {
                     volume: 1.0,
                 },
             );
+
             self.explosions.push(ExplosionCircle {
                 x: raw_mx,
                 y: raw_my,
                 radius: EXPLOSION_RADIUS * scale,
                 timer: 0.0,
             });
+
+            // Spawn particle emitters at explosion request positions
+            for pos in explosion_requests.iter() {
+                let mut config = particle_explosion();
+                config.colors_curve = ColorCurve {
+                    start: Color::new(1.0, 0.647, 0.0, 1.0),
+                    mid: Color::new(1.0, 0.4, 0.0, 0.8),
+                    end: Color::new(0.5, 0.0, 0.0, 0.0),
+                };
+                let mut emitter = Emitter::new(config);
+                emitter.emit(*pos, 25);
+                self.emitters.push((emitter, *pos));
+            }
         }
 
         if self.health <= 0.0 && !self.game_over_sound_played {
@@ -165,7 +203,7 @@ impl GameState {
         }
     }
 
-    pub fn draw(&self, assets: &GameAssets) {
+    pub fn draw(&mut self, assets: &GameAssets) {
         let (scale, offset_x, offset_y) = self.get_scaling();
         let (raw_mx, raw_my) = mouse_position();
 
@@ -180,6 +218,11 @@ impl GameState {
         for e in self.explosions.iter() {
             let alpha = 1.0 - (e.timer / 0.2);
             draw_circle_lines(e.x, e.y, e.radius, 3.0, Color::new(1.0, 0.647, 0.0, alpha));
+        }
+
+        // Draw particle emitters
+        for (emitter, pos) in self.emitters.iter_mut() {
+            emitter.draw(*pos);
         }
 
         // Draw UI
