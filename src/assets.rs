@@ -4,7 +4,7 @@ use macroquad::prelude::*;
 
 // Embed assets at compile time
 const FONT_DATA: &[u8] = include_bytes!("../assets/font/kenny_future.ttf");
-const CURSOR_DATA: &[u8] = include_bytes!("../assets/cursor/cursor_h.png");
+
 
 // UI Assets
 const BAR_BG: &[u8] = include_bytes!("../assets/PNG/Grey/Default/bar_round_large.png");
@@ -33,7 +33,7 @@ const BODY_YELLOW_R: &[u8] =
 
 pub struct GameAssets {
     pub font: Font,
-    pub cursor_texture: Texture2D,
+  
     pub bar_bg: Texture2D,
     pub bar_red: Texture2D,
     pub bar_yellow: Texture2D,
@@ -49,8 +49,7 @@ pub struct GameAssets {
 impl GameAssets {
     pub async fn load() -> Self {
         let font = load_ttf_font_from_bytes(FONT_DATA).expect("Failed to load font");
-        let cursor_texture = Texture2D::from_file_with_format(CURSOR_DATA, Some(ImageFormat::Png));
-
+       
         let bar_bg = Texture2D::from_file_with_format(BAR_BG, Some(ImageFormat::Png));
         let bar_red = Texture2D::from_file_with_format(BAR_RED, Some(ImageFormat::Png));
         let bar_yellow = Texture2D::from_file_with_format(BAR_YELLOW, Some(ImageFormat::Png));
@@ -83,7 +82,7 @@ impl GameAssets {
 
         Self {
             font,
-            cursor_texture,
+           
             bar_bg,
             bar_red,
             bar_yellow,
